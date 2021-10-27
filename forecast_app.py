@@ -47,11 +47,13 @@ if forecast_data_column.startswith('caged'):
     cbo_unique_list = sorted(caged_df['ocupacao'].unique())
     selected_cbo = st.sidebar.selectbox(label="Selecione ocupação CBO", index=0, options=['Todos'] + cbo_unique_list)
     if selected_cbo != 'Todos':
-        cbo_df = caged_df.loc[(caged_df['ocupacao'] == selected_cbo)]
+        # print(tabulate(caged_df.head(10), headers='keys', tablefmt='psql'))
+        cbo_df = caged_df.loc[(caged_df['ocupacao'] == selected_cbo)]  # filter caged to selected cbo
         cbo_df = cbo_df[['date']]
-        cbo_df = cbo_df.groupby(['date'])['date'].count().reset_index(name="{}".format('count'))
+        cbo_df = cbo_df.groupby(['date'])['date'].count().reset_index(name="{}".format('count'))  # transform df in quantity over time
         cbo_df.date = pd.to_datetime(cbo_df.date)
-        cbo_df = cbo_df.groupby(pd.Grouper(key='date', freq='1M')).sum()
+        cbo_df = cbo_df.groupby(pd.Grouper(key='date', freq='1M')).sum()  # transform df in quantity per month over time
+        # print(tabulate(cbo_df.head(10), headers='keys', tablefmt='psql'))
         cbo_df['ocupacao'] = selected_cbo
         cbo_df.index = cbo_df.index.strftime('%Y-%m-01')
         cbo_df.index = pd.to_datetime(cbo_df.index)
@@ -96,9 +98,11 @@ if type_of_model == 'Multivariado':
 # TRAIN
 if type_of_model == 'Univariado':
     df = df[[forecast_data_column, 'date']]
+    # get the inverval where there is data
     first_idx = df[forecast_data_column].first_valid_index()
     last_idx = df[forecast_data_column].last_valid_index()
     df = df.loc[first_idx:last_idx]
+
     df = df.fillna(method='ffill')
     df = df.reset_index(drop=True)
     # print(df)
@@ -130,22 +134,20 @@ elif type_of_model == 'Multivariado':
         first_idx_list.append(dg[current_data_column].first_valid_index())
         last_idx_list.append(dg[current_data_column].last_valid_index())
 
+    # get the inverval where there is data for every auxiliary data
     first_idx = max(first_idx_list)
     last_idx = min(last_idx_list)
 
     for i in range(len(df_list)):
         dg = df_list[i]
         dg = dg.loc[first_idx:last_idx]
+        # fill the gaps
         dg = dg.interpolate(method='linear', limit=3, limit_area='inside')
         dg = dg.reset_index(drop=True)
         dg['date'] = pd.to_datetime(dg['date'])
         dg = dg.set_index('date')
         if i == 0:
             df = dg
-        # print(selected_data_column_list[i])
-        # print(dg.head(2))
-        # print(dg.tail(2))
-        # print('----------------')
         series = TimeSeries.from_dataframe(dg, value_cols=selected_data_column_list[i])
 
         series_list.append(series)

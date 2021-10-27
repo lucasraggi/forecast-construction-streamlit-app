@@ -80,18 +80,20 @@ def standardize_date(date_string, date_format, out_date_format='%Y-%m-%d'):
 
 def test_multi_variate(series_list, model):
     scaled_series = []
+    # normalize series betwen -1 and 1
     for series in series_list:
         scaler_series = Scaler()
         scaled_series.append(scaler_series.fit_transform(series))
 
+    # intervals for [3 years ago to 2 years ago, 2 years ago to 1 year ago, 1 year ago to now]
     intervals = [(-37, -25), (-25, -13), (-13, -1)]
     mape_list = []
     for j in range(len(intervals)):
         train_series_list = []
         val_series_list = []
         for k in range(len(series_list)):
-            train_series, val_series = scaled_series[k][:intervals[j][0]], scaled_series[k][
-                                                                           intervals[j][0]:intervals[j][1]]
+            train_series = scaled_series[k][:intervals[j][0]]
+            val_series = scaled_series[k][intervals[j][0]:intervals[j][1]]
             train_series_list.append(train_series)
             val_series_list.append(val_series)
 
@@ -108,6 +110,7 @@ def test_multi_variate(series_list, model):
         else:
             pred_sum = pred_sum.append(pred)
 
+        # get the last half of the data so it can be easier to see
         df1 = predicted_series[(int(len(predicted_series) * 0.5)):].pd_dataframe()
         df1 = df1.rename(columns={df1.columns[0]: 'dado verdadeiro'})
 
